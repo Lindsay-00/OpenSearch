@@ -680,10 +680,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
                 }
                 performComputeIntensiveTask();
                 // fork the execution in the search thread pool
-                runAsync(getExecutor(shard), () ->
-                    // changed: Compute- and memory-intensive logic
-//                    performComputeIntensiveTask();
-                    executeQueryPhase(orig, task, keepStatesInContext), listener);
+                runAsync(getExecutor(shard), () -> executeQueryPhase(orig, task, keepStatesInContext), listener);
             }
 
             @Override

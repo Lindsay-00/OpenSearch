@@ -39,9 +39,12 @@ import org.opensearch.common.settings.Setting;
 import org.opensearch.common.settings.Setting.Property;
 import org.opensearch.common.settings.Settings;
 import org.opensearch.common.unit.TimeValue;
+import org.opensearch.indices.IndicesRequestCache;
 import org.opensearch.node.Node;
 import org.opensearch.threadpool.RunnableTaskExecutionListener;
 import org.opensearch.threadpool.TaskAwareRunnable;
+
+import org.opensearch.cluster.service.ClusterService;
 
 import java.util.List;
 import java.util.Optional;
@@ -68,6 +71,13 @@ import java.util.function.Function;
 public class OpenSearchExecutors {
 
     private static final DeprecationLogger deprecationLogger = DeprecationLogger.getLogger(OpenSearchExecutors.class);
+
+    // for priority
+    public static final Setting<Integer> SEARCH_THREAD_PRIORITY = Setting.intSetting(
+        "thread_pool.search.priority",
+        3, // Maximum priority
+        Property.NodeScope
+    );
 
     /**
      * Setting to manually set the number of available processors. This setting is used to adjust thread pool sizes per node.
@@ -355,18 +365,42 @@ public class OpenSearchExecutors {
         return DIRECT_EXECUTOR_SERVICE;
     }
 
+//    public static String threadName(Settings settings, String namePrefix) {
+//        if (Node.NODE_NAME_SETTING.exists(settings)) {
+//            return threadName(Node.NODE_NAME_SETTING.get(settings), namePrefix);
+//        } else {
+//            // TODO this should only be allowed in tests
+//            return threadName("", namePrefix);
+//        }
+//    }
+//
+//    public static String threadName(final String nodeName, final String namePrefix) {
+//        // TODO missing node names should only be allowed in tests
+//        return "opensearch" + (nodeName.isEmpty() ? "" : "[") + nodeName + (nodeName.isEmpty() ? "" : "]") + "[" + namePrefix + "]";
+//    }
+    // for priority
     public static String threadName(Settings settings, String namePrefix) {
-        if (Node.NODE_NAME_SETTING.exists(settings)) {
-            return threadName(Node.NODE_NAME_SETTING.get(settings), namePrefix);
-        } else {
-            // TODO this should only be allowed in tests
-            return threadName("", namePrefix);
-        }
+        return threadName(settings, namePrefix, false); // Default isSearch to false
     }
 
     public static String threadName(final String nodeName, final String namePrefix) {
-        // TODO missing node names should only be allowed in tests
-        return "opensearch" + (nodeName.isEmpty() ? "" : "[") + nodeName + (nodeName.isEmpty() ? "" : "]") + "[" + namePrefix + "]";
+        return threadName(nodeName, namePrefix, false); // Default isSearch to false
+    }
+
+    // New method with additional parameter
+    public static String threadName(Settings settings, String namePrefix, boolean isSearch) {
+        if (Node.NODE_NAME_SETTING.exists(settings)) {
+            return threadName(Node.NODE_NAME_SETTING.get(settings), namePrefix, isSearch);
+        } else {
+            // TODO this should only be allowed in tests
+            return threadName("", namePrefix, isSearch);
+        }
+    }
+
+    public static String threadName(final String nodeName, final String namePrefix, boolean isSearch) {
+        // Include "[search]" in the name if isSearch is true
+        String searchSuffix = isSearch ? "[search]" : "";
+        return "opensearch" + (nodeName.isEmpty() ? "" : "[") + nodeName + (nodeName.isEmpty() ? "" : "]") + "[" + namePrefix + "]" + searchSuffix;
     }
 
     public static ThreadFactory daemonThreadFactory(Settings settings, String namePrefix) {
@@ -376,6 +410,10 @@ public class OpenSearchExecutors {
     public static ThreadFactory daemonThreadFactory(String nodeName, String namePrefix) {
         assert nodeName != null && false == nodeName.isEmpty();
         return daemonThreadFactory(threadName(nodeName, namePrefix));
+    }
+    // for priority
+    public static ThreadFactory daemonThreadFactory(String namePrefix, boolean isSearch) {
+        return new OpenSearchThreadFactory(namePrefix, isSearch);
     }
 
     public static ThreadFactory daemonThreadFactory(String namePrefix) {
@@ -392,10 +430,22 @@ public class OpenSearchExecutors {
         final ThreadGroup group;
         final AtomicInteger threadNumber = new AtomicInteger(1);
         final String namePrefix;
+        final boolean isSearch;
+        int priority;
+//        boolean search;
 
         @SuppressWarnings("removal")
         OpenSearchThreadFactory(String namePrefix) {
             this.namePrefix = namePrefix;
+            this.isSearch = false;
+            SecurityManager s = System.getSecurityManager();
+            group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
+        }
+
+        OpenSearchThreadFactory(String namePrefix, boolean isSearch) {
+            this.namePrefix = namePrefix;
+            this.isSearch = isSearch;
+//            this.priority = SEARCH_THREAD_PRIORITY.get(settings);
             SecurityManager s = System.getSecurityManager();
             group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
         }
@@ -404,9 +454,39 @@ public class OpenSearchExecutors {
         public Thread newThread(Runnable r) {
             Thread t = new Thread(group, r, namePrefix + "[T#" + threadNumber.getAndIncrement() + "]", 0);
             t.setDaemon(true);
+
+//            // Check if namePrefix is Search
+//            search = isLastBracketSearch(namePrefix);
+//            if (search) {
+//                t.setPriority(3);
+//            }
+
+            if (isSearch){
+                t.setPriority(2); // here
+            }
+//            int priority = IndicesRequestCache.SEARCH_THREAD_PRIORITY.get(settings);
+//            t.setPriority(priority);
             return t;
         }
 
+    }
+//    Check if namePrefix is Search
+//    public static boolean isLastBracketSearch(String threadName) {
+//        // Split the thread name by '[' and ']'
+//        String[] parts = threadName.split("\\[|\\]");
+//
+//        // Check if the last non-empty part is "search"
+//        for (int i = parts.length - 1; i >= 0; i--) {
+//            if (!parts[i].isEmpty()) {
+//                return parts[i].equals("search");
+//            }
+//        }
+//        return false;
+//    }
+//
+    private static int getPriorityFromSetting(Settings settings) {
+        // Retrieve the priority from the settings using the defined setting
+        return SEARCH_THREAD_PRIORITY.get(settings);
     }
 
     /**
