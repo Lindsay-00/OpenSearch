@@ -412,8 +412,8 @@ public class OpenSearchExecutors {
         return daemonThreadFactory(threadName(nodeName, namePrefix));
     }
     // for priority
-    public static ThreadFactory daemonThreadFactory(String namePrefix, boolean isSearch) {
-        return new OpenSearchThreadFactory(namePrefix, isSearch);
+    public static ThreadFactory daemonThreadFactory(String namePrefix, boolean isSearch, Settings settings) {
+        return new OpenSearchThreadFactory(namePrefix, isSearch, settings);
     }
 
     public static ThreadFactory daemonThreadFactory(String namePrefix) {
@@ -442,10 +442,10 @@ public class OpenSearchExecutors {
             group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
         }
 
-        OpenSearchThreadFactory(String namePrefix, boolean isSearch) {
+        OpenSearchThreadFactory(String namePrefix, boolean isSearch, Settings settings) {
             this.namePrefix = namePrefix;
             this.isSearch = isSearch;
-//            this.priority = SEARCH_THREAD_PRIORITY.get(settings);
+            this.priority = SEARCH_THREAD_PRIORITY.get(settings);
             SecurityManager s = System.getSecurityManager();
             group = (s != null) ? s.getThreadGroup() : Thread.currentThread().getThreadGroup();
         }
@@ -462,10 +462,9 @@ public class OpenSearchExecutors {
 //            }
 
             if (isSearch){
-                t.setPriority(2); // here
+                t.setPriority(priority); // here
             }
-//            int priority = IndicesRequestCache.SEARCH_THREAD_PRIORITY.get(settings);
-//            t.setPriority(priority);
+
             return t;
         }
 

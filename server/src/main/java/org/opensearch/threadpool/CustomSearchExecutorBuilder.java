@@ -25,6 +25,7 @@ public final class CustomSearchExecutorBuilder extends ExecutorBuilder<CustomSea
     private final Setting<Integer> queueSizeSetting;
     private final AtomicReference<RunnableTaskExecutionListener> runnableTaskListener;
     private final boolean isSearch;
+    private final Settings globalSettings;
 
     public CustomSearchExecutorBuilder(
         final Settings settings,
@@ -48,6 +49,7 @@ public final class CustomSearchExecutorBuilder extends ExecutorBuilder<CustomSea
     ) {
         super(name);
         this.isSearch = isSearch;
+        this.globalSettings = settings;
         final String sizeKey = settingsKey(prefix, "size");
         this.sizeSetting = new Setting<>(
             sizeKey,
@@ -82,7 +84,7 @@ public final class CustomSearchExecutorBuilder extends ExecutorBuilder<CustomSea
         int size = settings.size;
         int queueSize = settings.queueSize;
         final ThreadFactory threadFactory = OpenSearchExecutors.daemonThreadFactory(
-            OpenSearchExecutors.threadName(settings.nodeName, name(), isSearch), isSearch
+            OpenSearchExecutors.threadName(settings.nodeName, name(), isSearch), isSearch, globalSettings
         );
         final ExecutorService executor = OpenSearchExecutors.newResizable(
             settings.nodeName + "/" + name(),
