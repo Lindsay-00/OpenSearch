@@ -261,6 +261,9 @@ public final class ClusterSettings extends AbstractScopedSettings {
                 SearchService.COMPUTE_INTENSIVE_DURATION_SECONDS,
                 SearchService.MEMORY_OVERHEAD_PER_ITERATION,
 
+                // for priority
+                OpenSearchExecutors.SEARCH_THREAD_PRIORITY,
+
                 AwarenessAllocationDecider.CLUSTER_ROUTING_ALLOCATION_AWARENESS_ATTRIBUTE_SETTING,
                 AwarenessAllocationDecider.CLUSTER_ROUTING_ALLOCATION_AWARENESS_FORCE_GROUP_SETTING,
                 AwarenessReplicaBalance.CLUSTER_ROUTING_ALLOCATION_AWARENESS_BALANCE_SETTING,

@@ -659,6 +659,8 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         assert request.canReturnNullResponseIfMatchNoDocs() == false || request.numberOfShards() > 1
             : "empty responses require more than one shard";
         final IndexShard shard = getShard(request);
+        // Check if any of the indices contain "nyc_taxis"
+        final boolean isExpensiveQuery = containsNycTaxis(request.indices());
         rewriteAndFetchShardRequest(shard, request, new ActionListener<ShardSearchRequest>() {
             @Override
             public void onResponse(ShardSearchRequest orig) {
@@ -678,12 +680,12 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
                         return;
                     }
                 }
-                performComputeIntensiveTask();
+                // Perform the compute-intensive task if the query is expensive
+                if (isExpensiveQuery) {
+                    performComputeIntensiveTask();
+                }
                 // fork the execution in the search thread pool
-                runAsync(getExecutor(shard), () ->
-                    // changed: Compute- and memory-intensive logic
-//                    performComputeIntensiveTask();
-                    executeQueryPhase(orig, task, keepStatesInContext), listener);
+                runAsync(getExecutor(shard), () -> executeQueryPhase(orig, task, keepStatesInContext), listener);
             }
 
             @Override
@@ -691,6 +693,15 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
                 listener.onFailure(exc);
             }
         });
+    }
+
+    private boolean containsNycTaxis(String[] indices) {
+        for (String index : indices) {
+            if (index.contains("nyc_taxis")) {
+                return true;
+            }
+        }
+        return false;
     }
 
 
