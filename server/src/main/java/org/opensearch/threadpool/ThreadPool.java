@@ -250,7 +250,7 @@ public class ThreadPool implements ReportingService<ThreadPoolInfo>, Scheduler {
                 Names.SEARCH,
                 searchThreadPoolSize(allocatedProcessors),
                 1000, // Queue size
-                true, // Set isSearch to true for search-related threads
+//                true, // Set isSearch to true for search-related threads
                 runnableTaskListener
             )
         );

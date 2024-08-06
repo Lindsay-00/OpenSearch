@@ -24,7 +24,7 @@ public final class CustomSearchExecutorBuilder extends ExecutorBuilder<CustomSea
     private final Setting<Integer> sizeSetting;
     private final Setting<Integer> queueSizeSetting;
     private final AtomicReference<RunnableTaskExecutionListener> runnableTaskListener;
-    private final boolean isSearch;
+//    private final boolean isSearch;
     private final Settings globalSettings;
 
     public CustomSearchExecutorBuilder(
@@ -32,10 +32,10 @@ public final class CustomSearchExecutorBuilder extends ExecutorBuilder<CustomSea
         final String name,
         final int size,
         final int queueSize,
-        final boolean isSearch,
+//        final boolean isSearch,
         final AtomicReference<RunnableTaskExecutionListener> runnableTaskListener
     ) {
-        this(settings, name, size, queueSize, "thread_pool." + name, isSearch, runnableTaskListener);
+        this(settings, name, size, queueSize, "thread_pool." + name, runnableTaskListener);
     }
 
     public CustomSearchExecutorBuilder(
@@ -44,11 +44,11 @@ public final class CustomSearchExecutorBuilder extends ExecutorBuilder<CustomSea
         final int size,
         final int queueSize,
         final String prefix,
-        final boolean isSearch,
+//        final boolean isSearch,
         final AtomicReference<RunnableTaskExecutionListener> runnableTaskListener
     ) {
         super(name);
-        this.isSearch = isSearch;
+//        this.isSearch = isSearch;
         this.globalSettings = settings;
         final String sizeKey = settingsKey(prefix, "size");
         this.sizeSetting = new Setting<>(
@@ -84,7 +84,7 @@ public final class CustomSearchExecutorBuilder extends ExecutorBuilder<CustomSea
         int size = settings.size;
         int queueSize = settings.queueSize;
         final ThreadFactory threadFactory = OpenSearchExecutors.daemonThreadFactory(
-            OpenSearchExecutors.threadName(settings.nodeName, name(), isSearch), isSearch, globalSettings
+            OpenSearchExecutors.threadName(settings.nodeName, name()), true, globalSettings
         );
         final ExecutorService executor = OpenSearchExecutors.newResizable(
             settings.nodeName + "/" + name(),

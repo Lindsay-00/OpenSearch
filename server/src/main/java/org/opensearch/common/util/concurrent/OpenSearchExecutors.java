@@ -75,7 +75,7 @@ public class OpenSearchExecutors {
     // for priority
     public static final Setting<Integer> SEARCH_THREAD_PRIORITY = Setting.intSetting(
         "thread_pool.search.priority",
-        3, // Maximum priority
+        4,
         Property.NodeScope
     );
 
@@ -380,28 +380,19 @@ public class OpenSearchExecutors {
 //    }
     // for priority
     public static String threadName(Settings settings, String namePrefix) {
-        return threadName(settings, namePrefix, false); // Default isSearch to false
-    }
-
-    public static String threadName(final String nodeName, final String namePrefix) {
-        return threadName(nodeName, namePrefix, false); // Default isSearch to false
-    }
-
-    // New method with additional parameter
-    public static String threadName(Settings settings, String namePrefix, boolean isSearch) {
         if (Node.NODE_NAME_SETTING.exists(settings)) {
-            return threadName(Node.NODE_NAME_SETTING.get(settings), namePrefix, isSearch);
+            return threadName(Node.NODE_NAME_SETTING.get(settings), namePrefix);
         } else {
             // TODO this should only be allowed in tests
-            return threadName("", namePrefix, isSearch);
+            return threadName("", namePrefix);
         }
     }
 
-    public static String threadName(final String nodeName, final String namePrefix, boolean isSearch) {
-        // Include "[search]" in the name if isSearch is true
-        String searchSuffix = isSearch ? "[search]" : "";
-        return "opensearch" + (nodeName.isEmpty() ? "" : "[") + nodeName + (nodeName.isEmpty() ? "" : "]") + "[" + namePrefix + "]" + searchSuffix;
+    public static String threadName(final String nodeName, final String namePrefix) {
+        // TODO missing node names should only be allowed in tests
+        return "opensearch" + (nodeName.isEmpty() ? "" : "[") + nodeName + (nodeName.isEmpty() ? "" : "]") + "[" + namePrefix + "]";
     }
+
 
     public static ThreadFactory daemonThreadFactory(Settings settings, String namePrefix) {
         return daemonThreadFactory(threadName(settings, namePrefix));
@@ -483,10 +474,6 @@ public class OpenSearchExecutors {
 //        return false;
 //    }
 //
-    private static int getPriorityFromSetting(Settings settings) {
-        // Retrieve the priority from the settings using the defined setting
-        return SEARCH_THREAD_PRIORITY.get(settings);
-    }
 
     /**
      * Cannot instantiate.
