@@ -471,6 +471,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
             if (iterations % 1000 == 0) {
                 logger.info("[ CPU_AND_MEMORY_INTENSIVE ] Performed {} iterations", iterations);
             }
+            Thread.yield();
         }
         logger.info("Completed compute-intensive task");
     }
