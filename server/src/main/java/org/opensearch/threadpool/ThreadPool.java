@@ -56,20 +56,8 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.node.Node;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.RejectedExecutionHandler;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -210,6 +198,8 @@ public class ThreadPool implements ReportingService<ThreadPoolInfo>, Scheduler {
         return Collections.unmodifiableCollection(builders.values());
     }
 
+    private final Map<String, ExecutorHolder> queryGroupThreadPools;
+
     public static Setting<TimeValue> ESTIMATED_TIME_INTERVAL_SETTING = Setting.timeSetting(
         "thread_pool.estimated_time_interval",
         TimeValue.timeValueMillis(200),
@@ -228,6 +218,7 @@ public class ThreadPool implements ReportingService<ThreadPoolInfo>, Scheduler {
     ) {
         assert Node.NODE_NAME_SETTING.exists(settings);
 
+        this.queryGroupThreadPools = new ConcurrentHashMap<>();
         final Map<String, ExecutorBuilder> builders = new HashMap<>();
         final int allocatedProcessors = OpenSearchExecutors.allocatedProcessors(settings);
         final int halfProc = halfAllocatedProcessors(allocatedProcessors);
@@ -336,6 +327,53 @@ public class ThreadPool implements ReportingService<ThreadPoolInfo>, Scheduler {
         this.cachedTimeThread = new CachedTimeThread(OpenSearchExecutors.threadName(settings, "[timer]"), estimatedTimeInterval.millis());
         this.cachedTimeThread.start();
     }
+
+    public void createAndRegisterThreadPoolForQueryGroup(
+        final Settings settings,
+        String queryGroupId,
+        int maxThreads,
+        int queueSize
+    ) {
+        String threadPoolName = "query_group_" + queryGroupId;
+
+        if (queryGroupThreadPools.containsKey(threadPoolName)) {
+            throw new IllegalStateException("Thread pool with name [" + threadPoolName + "] already exists");
+        }
+
+        ResizableExecutorBuilder builder = new ResizableExecutorBuilder(
+            settings,
+            threadPoolName,
+            maxThreads,
+            queueSize,
+            null     // Listener for task execution, can be null
+        );
+
+        ResizableExecutorBuilder.ResizableExecutorSettings executorSettings = builder.getSettings(settings);
+        ExecutorHolder executorHolder = builder.build(executorSettings, threadContext);
+
+        queryGroupThreadPools.put(threadPoolName, executorHolder);
+        System.out.println("Created and registered new resizable thread pool for QueryGroup: " + threadPoolName);
+
+        // for testing
+//        listAllThreadPools();
+    }
+//    for testing
+//    public Set<String> listAllThreadPools() {
+//        System.out.println(queryGroupThreadPools.keySet());
+//        return queryGroupThreadPools.keySet();
+//    }
+
+    // Method to retrieve the ExecutorHolder for a specific QueryGroup
+    public ExecutorService executorForQueryGroup(String queryGroupId) {
+        String threadPoolName = "query_group_" + queryGroupId;
+        final ExecutorHolder holder = queryGroupThreadPools.get(threadPoolName);
+        if (holder == null) {
+            throw new IllegalArgumentException("No executor service found for query group [" + queryGroupId + "]");
+        }
+        return holder.executor();
+    }
+
+
 
     /**
      * Returns a value of milliseconds that may be used for relative time calculations.
