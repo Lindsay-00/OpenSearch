@@ -65,15 +65,10 @@ public class TransportCreateQueryGroupAction extends HandledTransportAction<Crea
         String queryGroupId = request.getQueryName();
 
         try {
-            int maxThreads = 10;
-            int queueSize = 1000;
-
             // Create and register the thread pool for the new QueryGroup
             threadPool.createAndRegisterThreadPoolForQueryGroup(
                 settings,
-                queryGroupId,
-                maxThreads,
-                queueSize
+                queryGroupId
             );
         } catch (Exception e) {
             listener.onFailure(e);

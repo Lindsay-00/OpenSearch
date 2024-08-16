@@ -595,6 +595,8 @@ public final class ClusterSettings extends AbstractScopedSettings {
                 ResourceWatcherService.RELOAD_INTERVAL_MEDIUM,
                 ResourceWatcherService.RELOAD_INTERVAL_LOW,
                 ThreadPool.ESTIMATED_TIME_INTERVAL_SETTING,
+                ThreadPool.QUERY_GROUP_MAX_THREADS_SETTING,
+                ThreadPool.QUERY_GROUP_QUEUE_SIZE_SETTING,
                 FastVectorHighlighter.SETTING_TV_HIGHLIGHT_MULTI_VALUE,
                 Node.BREAKER_TYPE_KEY,
                 OperationRouting.USE_ADAPTIVE_REPLICA_SELECTION_SETTING,

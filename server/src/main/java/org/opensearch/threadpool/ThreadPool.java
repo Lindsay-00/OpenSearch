@@ -200,10 +200,27 @@ public class ThreadPool implements ReportingService<ThreadPoolInfo>, Scheduler {
 
     private final Map<String, ExecutorHolder> queryGroupThreadPools;
 
+    private final int maxThreads;
+
+    private final int queueSize;
+
     public static Setting<TimeValue> ESTIMATED_TIME_INTERVAL_SETTING = Setting.timeSetting(
         "thread_pool.estimated_time_interval",
         TimeValue.timeValueMillis(200),
         TimeValue.ZERO,
+        Setting.Property.NodeScope
+    );
+
+    // Static settings for maxThreads and queueSize
+    public static final Setting<Integer> QUERY_GROUP_MAX_THREADS_SETTING = Setting.intSetting(
+        "thread_pool.query_group.max_threads",
+        10,
+        Setting.Property.NodeScope
+    );
+
+    public static final Setting<Integer> QUERY_GROUP_QUEUE_SIZE_SETTING = Setting.intSetting(
+        "thread_pool.query_group.queue_size",
+        1000,
         Setting.Property.NodeScope
     );
 
@@ -219,6 +236,9 @@ public class ThreadPool implements ReportingService<ThreadPoolInfo>, Scheduler {
         assert Node.NODE_NAME_SETTING.exists(settings);
 
         this.queryGroupThreadPools = new ConcurrentHashMap<>();
+        this.maxThreads = ThreadPool.QUERY_GROUP_MAX_THREADS_SETTING.get(settings);
+        this.queueSize = ThreadPool.QUERY_GROUP_QUEUE_SIZE_SETTING.get(settings);
+
         final Map<String, ExecutorBuilder> builders = new HashMap<>();
         final int allocatedProcessors = OpenSearchExecutors.allocatedProcessors(settings);
         final int halfProc = halfAllocatedProcessors(allocatedProcessors);
@@ -330,9 +350,7 @@ public class ThreadPool implements ReportingService<ThreadPoolInfo>, Scheduler {
 
     public void createAndRegisterThreadPoolForQueryGroup(
         final Settings settings,
-        String queryGroupId,
-        int maxThreads,
-        int queueSize
+        String queryGroupId
     ) {
         String threadPoolName = "query_group_" + queryGroupId;
 
