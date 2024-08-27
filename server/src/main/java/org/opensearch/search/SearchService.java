@@ -631,7 +631,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
                     }
                 }
                 // fork the execution in the search thread pool
-                runAsync(getExecutor(shard), () -> executeQueryPhase(orig, task, keepStatesInContext), listener);
+                runAsync(getExecutor(shard, task), () -> executeQueryPhase(orig, task, keepStatesInContext), listener);
             }
 
             @Override
@@ -783,6 +783,22 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         } else if (indexShard.indexSettings().isSearchThrottled()) {
             executorName = Names.SEARCH_THROTTLED;
         } else {
+            executorName = Names.SEARCH;
+        }
+        return threadPool.executor(executorName);
+    }
+
+    private Executor getExecutor(IndexShard indexShard, SearchShardTask task) {
+        assert indexShard != null;
+        final String executorName;
+        if (indexShard.isSystem()) {
+            executorName = Names.SYSTEM_READ;
+        } else if (indexShard.indexSettings().isSearchThrottled()) {
+            executorName = Names.SEARCH_THROTTLED;
+        } else {
+            if (!Objects.equals(task.getQueryGroupId(), "DEFAULT_QUERY_GROUP")) {
+                return threadPool.executorForQueryGroup(task.getQueryGroupId());
+            }
             executorName = Names.SEARCH;
         }
         return threadPool.executor(executorName);
