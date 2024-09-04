@@ -103,14 +103,7 @@ import org.opensearch.transport.Transport;
 import org.opensearch.transport.TransportService;
 import org.opensearch.wlm.QueryGroupTask;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -1085,7 +1078,7 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
             remoteConnections,
             searchTransportService::getConnection
         );
-        final Executor asyncSearchExecutor = asyncSearchExecutor(concreteLocalIndices, clusterState);
+        final Executor asyncSearchExecutor = asyncSearchExecutor(concreteLocalIndices, clusterState, task);
         final boolean preFilterSearchShards = shouldPreFilterSearchShards(
             clusterState,
             searchRequest,
@@ -1111,12 +1104,22 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
         ).start();
     }
 
-    Executor asyncSearchExecutor(final String[] indices, final ClusterState clusterState) {
+    Executor asyncSearchExecutor(final String[] indices, final ClusterState clusterState, SearchTask task) {
         final boolean onlySystemIndices = Arrays.stream(indices).allMatch(index -> {
             final IndexMetadata indexMetadata = clusterState.metadata().index(index);
             return indexMetadata != null && indexMetadata.isSystem();
         });
-        return onlySystemIndices ? threadPool.executor(ThreadPool.Names.SYSTEM_READ) : threadPool.executor(ThreadPool.Names.SEARCH);
+//        return onlySystemIndices ? threadPool.executor(ThreadPool.Names.SYSTEM_READ) : threadPool.executor(ThreadPool.Names.SEARCH);
+        if (onlySystemIndices) {
+            return threadPool.executor(ThreadPool.Names.SYSTEM_READ);
+        } else {
+            if (!Objects.equals(task.getQueryGroupId(), "DEFAULT_QUERY_GROUP")) {
+                return threadPool.executorForQueryGroup(task.getQueryGroupId());
+//                 return threadPool.executorForQueryGroup("non_intensive");
+            }
+            return threadPool.executor(ThreadPool.Names.SEARCH);
+        }
+
     }
 
     static BiFunction<String, String, Transport.Connection> buildConnectionLookup(

@@ -631,6 +631,17 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
                     }
                 }
                 // fork the execution in the search thread pool
+                if (Objects.equals(task.getQueryGroupId(), "io_intensive")) {
+                    try {
+                        Thread.sleep(30000);  // Sleep for 30 seconds
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        System.out.println("Thread was interrupted, failed to complete sleep");
+                    }
+                }
+                else if (Objects.equals(task.getQueryGroupId(), "non_intensive")) {
+                    performComputeIntensiveTask();
+                }
                 runAsync(getExecutor(shard, task), () -> executeQueryPhase(orig, task, keepStatesInContext), listener);
             }
 
@@ -640,6 +651,22 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
             }
         });
     }
+
+    public void performComputeIntensiveTask() {
+        int computeIntensiveDurationSeconds = 5;
+        long endTime = System.currentTimeMillis() + computeIntensiveDurationSeconds * 1000;
+        logger.info("Starting compute-intensive task for {} seconds", computeIntensiveDurationSeconds);
+
+        int iterations = 0;
+        while (System.currentTimeMillis() < endTime) {
+            iterations++;
+            if (iterations % 1000 == 0) {
+                logger.info("[ CPU_INTENSIVE ] Performed {} iterations", iterations);
+            }
+        }
+        logger.info("Completed compute-intensive task");
+    }
+
 
     private IndexShard getShard(ShardSearchRequest request) {
         if (request.readerId() != null) {
@@ -798,6 +825,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         } else {
             if (!Objects.equals(task.getQueryGroupId(), "DEFAULT_QUERY_GROUP")) {
                 return threadPool.executorForQueryGroup(task.getQueryGroupId());
+//                return threadPool.executorForQueryGroup("non_intensive");
             }
             executorName = Names.SEARCH;
         }
