@@ -44,6 +44,11 @@ public class CreateQueryGroupRequest extends ActionRequest {
         this.queryGroup = queryGroup;
     }
 
+    /**
+     * Gets the name of the query.
+     *
+     * @return the query name.
+     */
     public String getQueryName() {
         return this.queryGroup.getName();
     }

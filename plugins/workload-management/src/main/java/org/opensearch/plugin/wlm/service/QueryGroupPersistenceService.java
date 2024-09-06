@@ -85,6 +85,11 @@ public class QueryGroupPersistenceService {
         clusterSettings.addSettingsUpdateConsumer(MAX_QUERY_GROUP_COUNT, this::setMaxQueryGroupCount);
     }
 
+    /**
+     * Retrieves the settings for the query group.
+     *
+     * @return the settings for the query group.
+     */
     public Settings getSettings() {
         return this.settings;
     }
