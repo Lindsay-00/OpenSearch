@@ -642,11 +642,13 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
                     }
                 }
                 // fork the execution in the search thread pool
-                try {
-                    Thread.sleep(sleepDurationSeconds * 1000);  // Sleep for 30 seconds
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    System.out.println("Thread was interrupted, failed to complete sleep");
+                if (Objects.equals(task.getQueryGroupId(), "io_intensive")){
+                    try {
+                        Thread.sleep(sleepDurationSeconds * 1000);  // Sleep for 30 seconds
+                    } catch (InterruptedException e) {
+                        Thread.currentThread().interrupt();
+                        System.out.println("Thread was interrupted, failed to complete sleep");
+                    }
                 }
                 runAsync(getExecutor(shard), () -> executeQueryPhase(orig, task, keepStatesInContext), listener);
             }
