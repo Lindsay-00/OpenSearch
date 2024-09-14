@@ -35,6 +35,7 @@ package org.opensearch.common.util.concurrent;
 import org.opensearch.common.SuppressForbidden;
 import org.opensearch.core.concurrency.OpenSearchRejectedExecutionException;
 
+import java.util.Objects;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -126,6 +127,14 @@ public class OpenSearchThreadPoolExecutor extends ThreadPoolExecutor {
 
     @Override
     public void execute(Runnable command) {
+        if (Objects.equals(this.getName(), "runTask-0/query_group_io_intensive")) {
+            try {
+                Thread.sleep(1000);  // Sleep for 30 seconds
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                System.out.println("Thread was interrupted, failed to complete sleep");
+            }
+        }
         command = wrapRunnable(command);
         try {
             super.execute(command);
