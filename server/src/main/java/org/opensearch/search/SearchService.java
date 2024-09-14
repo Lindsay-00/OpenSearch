@@ -835,17 +835,17 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
             executorName = Names.SEARCH_THROTTLED;
         } else {
             if (!Objects.equals(task.getQueryGroupId(), "DEFAULT_QUERY_GROUP")) {
-                if (Objects.equals(task.getQueryGroupId(), "io_intensive")) {
-                    try {
-                        Thread.sleep(sleepDurationSeconds * 1000);  // Sleep for 30 seconds
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                        System.out.println("Thread was interrupted, failed to complete sleep");
-                    }
-                }
-                else if (Objects.equals(task.getQueryGroupId(), "non_intensive")) {
-                    performComputeIntensiveTask();
-                }
+//                if (Objects.equals(task.getQueryGroupId(), "io_intensive")) {
+//                    try {
+//                        Thread.sleep(sleepDurationSeconds * 1000);  // Sleep for 30 seconds
+//                    } catch (InterruptedException e) {
+//                        Thread.currentThread().interrupt();
+//                        System.out.println("Thread was interrupted, failed to complete sleep");
+//                    }
+//                }
+//                else if (Objects.equals(task.getQueryGroupId(), "non_intensive")) {
+//                    performComputeIntensiveTask();
+//                }
                 return threadPool.executorForQueryGroup(task.getQueryGroupId());
 //                return threadPool.executorForQueryGroup("non_intensive");
             }
