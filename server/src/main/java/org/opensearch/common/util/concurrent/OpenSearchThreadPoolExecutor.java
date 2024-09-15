@@ -129,7 +129,7 @@ public class OpenSearchThreadPoolExecutor extends ThreadPoolExecutor {
     public void execute(Runnable command) {
         if (this.getName().endsWith("query_group_io_intensive")) {
             try {
-                Thread.sleep(5000);
+                Thread.sleep(200);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 System.out.println("Thread was interrupted, failed to complete sleep");
