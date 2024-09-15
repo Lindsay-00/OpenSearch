@@ -127,7 +127,7 @@ public class OpenSearchThreadPoolExecutor extends ThreadPoolExecutor {
 
     @Override
     public void execute(Runnable command) {
-        System.out.println("This is a test");
+        System.out.println(this.getName());
         if (Objects.equals(this.getName(), "runTask-0/query_group_io_intensive")) {
             try {
                 System.out.println("sleeping for 0.5s");
