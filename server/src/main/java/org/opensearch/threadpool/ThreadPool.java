@@ -214,7 +214,7 @@ public class ThreadPool implements ReportingService<ThreadPoolInfo>, Scheduler {
     // Static settings for maxThreads and queueSize
     public static final Setting<Integer> QUERY_GROUP_MAX_THREADS_SETTING = Setting.intSetting(
         "thread_pool.query_group.max_threads",
-        10,
+        5,
         Setting.Property.NodeScope
     );
 
@@ -371,15 +371,7 @@ public class ThreadPool implements ReportingService<ThreadPoolInfo>, Scheduler {
 
         queryGroupThreadPools.put(threadPoolName, executorHolder);
         System.out.println("Created and registered new resizable thread pool for QueryGroup: " + threadPoolName);
-
-        // for testing
-//        listAllThreadPools();
     }
-//    for testing
-//    public Set<String> listAllThreadPools() {
-//        System.out.println(queryGroupThreadPools.keySet());
-//        return queryGroupThreadPools.keySet();
-//    }
 
     // Method to retrieve the ExecutorHolder for a specific QueryGroup
     public ExecutorService executorForQueryGroup(String queryGroupId) {
