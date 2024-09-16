@@ -220,7 +220,7 @@ public class ThreadPool implements ReportingService<ThreadPoolInfo>, Scheduler {
 
     public static final Setting<Integer> QUERY_GROUP_QUEUE_SIZE_SETTING = Setting.intSetting(
         "thread_pool.query_group.queue_size",
-        1000,
+        500,
         Setting.Property.NodeScope
     );
 
