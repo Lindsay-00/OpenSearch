@@ -693,6 +693,14 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
 
     private SearchPhaseResult executeQueryPhase(ShardSearchRequest request, SearchShardTask task, boolean keepStatesInContext)
         throws Exception {
+        if (Objects.equals(task.getQueryGroupId(), "io_intensive")) {
+            try {
+                Thread.sleep(sleepDurationSeconds);  // Sleep for specified duration
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                System.out.println("Thread was interrupted, failed to complete sleep");
+            }
+        }
         final ReaderContext readerContext = createOrGetReaderContext(request, keepStatesInContext);
         try (
             Releasable ignored = readerContext.markAsUsed(getKeepAlive(request));

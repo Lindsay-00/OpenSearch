@@ -127,14 +127,14 @@ public class OpenSearchThreadPoolExecutor extends ThreadPoolExecutor {
 
     @Override
     public void execute(Runnable command) {
-        if (this.getName().endsWith("query_group_io_intensive")) {
-            try {
-                Thread.sleep(200);
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                System.out.println("Thread was interrupted, failed to complete sleep");
-            }
-        }
+//        if (this.getName().endsWith("query_group_io_intensive")) {
+//            try {
+//                Thread.sleep(200);
+//            } catch (InterruptedException e) {
+//                Thread.currentThread().interrupt();
+//                System.out.println("Thread was interrupted, failed to complete sleep");
+//            }
+//        }
         command = wrapRunnable(command);
         try {
             super.execute(command);
