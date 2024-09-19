@@ -171,6 +171,11 @@ import static org.opensearch.common.unit.TimeValue.timeValueMinutes;
 public class SearchService extends AbstractLifecycleComponent implements IndexEventListener {
     private static final Logger logger = LogManager.getLogger(SearchService.class);
 
+    public static final Setting<Integer> SLEEP_DURATION_SECONDS =
+        Setting.intSetting("search.service.experimental.sleep_duration_seconds", 0, Setting.Property.Dynamic, Setting.Property.NodeScope);
+
+    private volatile int sleepDurationSeconds;
+
     // we can have 5 minutes here, since we make sure to clean with search requests and when shard/index closes
     public static final Setting<TimeValue> DEFAULT_KEEPALIVE_SETTING = Setting.positiveTimeSetting(
         "search.default_keep_alive",
@@ -374,6 +379,8 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         TaskResourceTrackingService taskResourceTrackingService
     ) {
         Settings settings = clusterService.getSettings();
+        this.sleepDurationSeconds = SearchService.SLEEP_DURATION_SECONDS.get(settings);
+        clusterService.getClusterSettings().addSettingsUpdateConsumer(SearchService.SLEEP_DURATION_SECONDS, this::setSleepDurationSeconds);
         this.threadPool = threadPool;
         this.clusterService = clusterService;
         this.indicesService = indicesService;
@@ -426,6 +433,10 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
 
         allowDerivedField = CLUSTER_ALLOW_DERIVED_FIELD_SETTING.get(settings);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(CLUSTER_ALLOW_DERIVED_FIELD_SETTING, this::setAllowDerivedField);
+    }
+
+    private void setSleepDurationSeconds(int time) {
+        this.sleepDurationSeconds = time;
     }
 
     private void validateKeepAlives(TimeValue defaultKeepAlive, TimeValue maxKeepAlive) {
@@ -631,7 +642,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
                     }
                 }
                 // fork the execution in the search thread pool
-                runAsync(getExecutor(shard), () -> executeQueryPhase(orig, task, keepStatesInContext), listener);
+                runAsync(getExecutor(shard, task), () -> executeQueryPhase(orig, task, keepStatesInContext), listener);
             }
 
             @Override
@@ -655,6 +666,14 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
 
     private SearchPhaseResult executeQueryPhase(ShardSearchRequest request, SearchShardTask task, boolean keepStatesInContext)
         throws Exception {
+        if (Objects.equals(task.getQueryGroupId(), "io_intensive")) {
+            try {
+                Thread.sleep(sleepDurationSeconds);  // Sleep for specified duration
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                System.out.println("Thread was interrupted, failed to complete sleep");
+            }
+        }
         final ReaderContext readerContext = createOrGetReaderContext(request, keepStatesInContext);
         try (
             Releasable ignored = readerContext.markAsUsed(getKeepAlive(request));
@@ -783,6 +802,22 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         } else if (indexShard.indexSettings().isSearchThrottled()) {
             executorName = Names.SEARCH_THROTTLED;
         } else {
+            executorName = Names.SEARCH;
+        }
+        return threadPool.executor(executorName);
+    }
+
+    private Executor getExecutor(IndexShard indexShard, SearchShardTask task) {
+        assert indexShard != null;
+        final String executorName;
+        if (indexShard.isSystem()) {
+            executorName = Names.SYSTEM_READ;
+        } else if (indexShard.indexSettings().isSearchThrottled()) {
+            executorName = Names.SEARCH_THROTTLED;
+        } else {
+            if (!Objects.equals(task.getQueryGroupId(), "DEFAULT_QUERY_GROUP")) {
+                return threadPool.executorForQueryGroup(task.getQueryGroupId());
+            }
             executorName = Names.SEARCH;
         }
         return threadPool.executor(executorName);

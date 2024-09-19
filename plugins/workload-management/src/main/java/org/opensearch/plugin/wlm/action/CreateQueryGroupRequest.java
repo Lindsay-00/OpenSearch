@@ -45,6 +45,15 @@ public class CreateQueryGroupRequest extends ActionRequest {
     }
 
     /**
+     * Gets the name of the query.
+     *
+     * @return the query name.
+     */
+    public String getQueryName() {
+        return this.queryGroup.getName();
+    }
+
+    /**
      * Constructor for CreateQueryGroupRequest
      * @param in - A {@link StreamInput} object
      */

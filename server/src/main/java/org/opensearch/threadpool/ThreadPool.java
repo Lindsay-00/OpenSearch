@@ -56,20 +56,8 @@ import org.opensearch.core.xcontent.XContentBuilder;
 import org.opensearch.node.Node;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.concurrent.RejectedExecutionHandler;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.*;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
@@ -210,10 +198,29 @@ public class ThreadPool implements ReportingService<ThreadPoolInfo>, Scheduler {
         return Collections.unmodifiableCollection(builders.values());
     }
 
+    private final Map<String, ExecutorHolder> queryGroupThreadPools;
+
+    private final int maxThreads;
+
+    private final int queueSize;
+
     public static Setting<TimeValue> ESTIMATED_TIME_INTERVAL_SETTING = Setting.timeSetting(
         "thread_pool.estimated_time_interval",
         TimeValue.timeValueMillis(200),
         TimeValue.ZERO,
+        Setting.Property.NodeScope
+    );
+
+    // Static settings for maxThreads and queueSize
+    public static final Setting<Integer> QUERY_GROUP_MAX_THREADS_SETTING = Setting.intSetting(
+        "thread_pool.query_group.max_threads",
+        5,
+        Setting.Property.NodeScope
+    );
+
+    public static final Setting<Integer> QUERY_GROUP_QUEUE_SIZE_SETTING = Setting.intSetting(
+        "thread_pool.query_group.queue_size",
+        500,
         Setting.Property.NodeScope
     );
 
@@ -227,6 +234,10 @@ public class ThreadPool implements ReportingService<ThreadPoolInfo>, Scheduler {
         final ExecutorBuilder<?>... customBuilders
     ) {
         assert Node.NODE_NAME_SETTING.exists(settings);
+
+        this.queryGroupThreadPools = new ConcurrentHashMap<>();
+        this.maxThreads = ThreadPool.QUERY_GROUP_MAX_THREADS_SETTING.get(settings);
+        this.queueSize = ThreadPool.QUERY_GROUP_QUEUE_SIZE_SETTING.get(settings);
 
         final Map<String, ExecutorBuilder> builders = new HashMap<>();
         final int allocatedProcessors = OpenSearchExecutors.allocatedProcessors(settings);
@@ -336,6 +347,43 @@ public class ThreadPool implements ReportingService<ThreadPoolInfo>, Scheduler {
         this.cachedTimeThread = new CachedTimeThread(OpenSearchExecutors.threadName(settings, "[timer]"), estimatedTimeInterval.millis());
         this.cachedTimeThread.start();
     }
+
+    public void createAndRegisterThreadPoolForQueryGroup(
+        final Settings settings,
+        String queryGroupId
+    ) {
+        String threadPoolName = queryGroupId;
+
+        if (queryGroupThreadPools.containsKey(threadPoolName)) {
+            throw new IllegalStateException("Thread pool with name [" + threadPoolName + "] already exists");
+        }
+
+        ResizableExecutorBuilder builder = new ResizableExecutorBuilder(
+            settings,
+            threadPoolName,
+            maxThreads,
+            queueSize,
+            null
+        );
+
+        ResizableExecutorBuilder.ResizableExecutorSettings executorSettings = builder.getSettings(settings);
+        ExecutorHolder executorHolder = builder.build(executorSettings, threadContext);
+
+        queryGroupThreadPools.put(threadPoolName, executorHolder);
+        System.out.println("Created and registered new resizable thread pool for QueryGroup: " + threadPoolName);
+    }
+
+    // Method to retrieve the ExecutorHolder for a specific QueryGroup
+    public ExecutorService executorForQueryGroup(String queryGroupId) {
+        String threadPoolName = queryGroupId;
+        final ExecutorHolder holder = queryGroupThreadPools.get(threadPoolName);
+        if (holder == null) {
+            throw new IllegalArgumentException("No executor service found for query group [" + queryGroupId + "]");
+        }
+        return holder.executor();
+    }
+
+
 
     /**
      * Returns a value of milliseconds that may be used for relative time calculations.

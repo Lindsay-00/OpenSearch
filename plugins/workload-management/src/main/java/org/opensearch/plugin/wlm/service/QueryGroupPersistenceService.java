@@ -63,6 +63,7 @@ public class QueryGroupPersistenceService {
     private final ClusterService clusterService;
     private volatile int maxQueryGroupCount;
     final ThrottlingKey createQueryGroupThrottlingKey;
+    final Settings settings;
 
     /**
      * Constructor for QueryGroupPersistenceService
@@ -79,8 +80,18 @@ public class QueryGroupPersistenceService {
     ) {
         this.clusterService = clusterService;
         this.createQueryGroupThrottlingKey = clusterService.registerClusterManagerTask(CREATE_QUERY_GROUP_THROTTLING_KEY, true);
+        this.settings = settings;
         setMaxQueryGroupCount(MAX_QUERY_GROUP_COUNT.get(settings));
         clusterSettings.addSettingsUpdateConsumer(MAX_QUERY_GROUP_COUNT, this::setMaxQueryGroupCount);
+    }
+
+    /**
+     * Retrieves the settings for the query group.
+     *
+     * @return the settings for the query group.
+     */
+    public Settings getSettings() {
+        return this.settings;
     }
 
     /**
