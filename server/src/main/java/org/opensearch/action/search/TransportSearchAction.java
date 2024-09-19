@@ -1109,13 +1109,11 @@ public class TransportSearchAction extends HandledTransportAction<SearchRequest,
             final IndexMetadata indexMetadata = clusterState.metadata().index(index);
             return indexMetadata != null && indexMetadata.isSystem();
         });
-//        return onlySystemIndices ? threadPool.executor(ThreadPool.Names.SYSTEM_READ) : threadPool.executor(ThreadPool.Names.SEARCH);
         if (onlySystemIndices) {
             return threadPool.executor(ThreadPool.Names.SYSTEM_READ);
         } else {
             if (!Objects.equals(task.getQueryGroupId(), "DEFAULT_QUERY_GROUP")) {
                 return threadPool.executorForQueryGroup(task.getQueryGroupId());
-//                 return threadPool.executorForQueryGroup("non_intensive");
             }
             return threadPool.executor(ThreadPool.Names.SEARCH);
         }
