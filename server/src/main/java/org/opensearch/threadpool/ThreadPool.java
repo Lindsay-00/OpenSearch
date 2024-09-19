@@ -352,7 +352,7 @@ public class ThreadPool implements ReportingService<ThreadPoolInfo>, Scheduler {
         final Settings settings,
         String queryGroupId
     ) {
-        String threadPoolName = "query_group_" + queryGroupId;
+        String threadPoolName = queryGroupId;
 
         if (queryGroupThreadPools.containsKey(threadPoolName)) {
             throw new IllegalStateException("Thread pool with name [" + threadPoolName + "] already exists");
@@ -363,7 +363,7 @@ public class ThreadPool implements ReportingService<ThreadPoolInfo>, Scheduler {
             threadPoolName,
             maxThreads,
             queueSize,
-            null     // Listener for task execution, can be null
+            null
         );
 
         ResizableExecutorBuilder.ResizableExecutorSettings executorSettings = builder.getSettings(settings);
@@ -375,7 +375,7 @@ public class ThreadPool implements ReportingService<ThreadPoolInfo>, Scheduler {
 
     // Method to retrieve the ExecutorHolder for a specific QueryGroup
     public ExecutorService executorForQueryGroup(String queryGroupId) {
-        String threadPoolName = "query_group_" + queryGroupId;
+        String threadPoolName = queryGroupId;
         final ExecutorHolder holder = queryGroupThreadPools.get(threadPoolName);
         if (holder == null) {
             throw new IllegalArgumentException("No executor service found for query group [" + queryGroupId + "]");

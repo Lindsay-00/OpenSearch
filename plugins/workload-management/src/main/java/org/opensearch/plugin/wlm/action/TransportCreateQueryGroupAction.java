@@ -54,18 +54,11 @@ public class TransportCreateQueryGroupAction extends HandledTransportAction<Crea
         this.settings = this.queryGroupPersistenceService.getSettings();
     }
 
-//    @Override
-//    protected void doExecute(Task task, CreateQueryGroupRequest request, ActionListener<CreateQueryGroupResponse> listener) {
-//        threadPool.executor(ThreadPool.Names.SAME)
-//            .execute(() -> queryGroupPersistenceService.persistInClusterStateMetadata(request.getQueryGroup(), listener));
-//    }
-
     @Override
     protected void doExecute(Task task, CreateQueryGroupRequest request, ActionListener<CreateQueryGroupResponse> listener) {
         String queryGroupId = request.getQueryName();
 
         try {
-            // Create and register the thread pool for the new QueryGroup
             threadPool.createAndRegisterThreadPoolForQueryGroup(
                 settings,
                 queryGroupId
@@ -74,10 +67,6 @@ public class TransportCreateQueryGroupAction extends HandledTransportAction<Crea
             listener.onFailure(e);
             return;
         }
-        // for testing
-//        ExecutorService executorService = threadPool.executorForQueryGroup(queryGroupId);
-//        executorService.execute(() -> System.out.println("Task executed in thread pool for QueryGroup: " + queryGroupId));
-
 
         threadPool.executor(ThreadPool.Names.SAME)
             .execute(() -> queryGroupPersistenceService.persistInClusterStateMetadata(request.getQueryGroup(), listener));

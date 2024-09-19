@@ -171,14 +171,9 @@ import static org.opensearch.common.unit.TimeValue.timeValueMinutes;
 public class SearchService extends AbstractLifecycleComponent implements IndexEventListener {
     private static final Logger logger = LogManager.getLogger(SearchService.class);
 
-    // changed: new setting
-    public static final Setting<Integer> COMPUTE_INTENSIVE_DURATION_SECONDS =
-        Setting.intSetting("search.service.experimental.compute_intensive.duration_seconds", 5, Setting.Property.Dynamic, Setting.Property.NodeScope);
-
     public static final Setting<Integer> SLEEP_DURATION_SECONDS =
         Setting.intSetting("search.service.experimental.sleep_duration_seconds", 0, Setting.Property.Dynamic, Setting.Property.NodeScope);
 
-    private volatile int computeIntensiveDurationSeconds;
     private volatile int sleepDurationSeconds;
 
     // we can have 5 minutes here, since we make sure to clean with search requests and when shard/index closes
@@ -384,10 +379,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         TaskResourceTrackingService taskResourceTrackingService
     ) {
         Settings settings = clusterService.getSettings();
-        // changed: new setting
-        this.computeIntensiveDurationSeconds = SearchService.COMPUTE_INTENSIVE_DURATION_SECONDS.get(settings);
         this.sleepDurationSeconds = SearchService.SLEEP_DURATION_SECONDS.get(settings);
-        clusterService.getClusterSettings().addSettingsUpdateConsumer(SearchService.COMPUTE_INTENSIVE_DURATION_SECONDS, this::setComputeIntensiveDurationSeconds);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(SearchService.SLEEP_DURATION_SECONDS, this::setSleepDurationSeconds);
         this.threadPool = threadPool;
         this.clusterService = clusterService;
@@ -441,10 +433,6 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
 
         allowDerivedField = CLUSTER_ALLOW_DERIVED_FIELD_SETTING.get(settings);
         clusterService.getClusterSettings().addSettingsUpdateConsumer(CLUSTER_ALLOW_DERIVED_FIELD_SETTING, this::setAllowDerivedField);
-    }
-
-    private void setComputeIntensiveDurationSeconds(int time) {
-        this.computeIntensiveDurationSeconds = time;
     }
 
     private void setSleepDurationSeconds(int time) {
@@ -664,21 +652,6 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
         });
     }
 
-    public void performComputeIntensiveTask() {
-        long endTime = System.currentTimeMillis() + computeIntensiveDurationSeconds * 1000;
-        logger.info("Starting compute-intensive task for {} seconds", computeIntensiveDurationSeconds);
-
-        int iterations = 0;
-        while (System.currentTimeMillis() < endTime) {
-            iterations++;
-            if (iterations % 1000 == 0) {
-                logger.info("[ CPU_INTENSIVE ] Performed {} iterations", iterations);
-            }
-        }
-        logger.info("Completed compute-intensive task");
-    }
-
-
     private IndexShard getShard(ShardSearchRequest request) {
         if (request.readerId() != null) {
             return findReaderContext(request.readerId(), request).indexShard();
@@ -843,19 +816,7 @@ public class SearchService extends AbstractLifecycleComponent implements IndexEv
             executorName = Names.SEARCH_THROTTLED;
         } else {
             if (!Objects.equals(task.getQueryGroupId(), "DEFAULT_QUERY_GROUP")) {
-//                if (Objects.equals(task.getQueryGroupId(), "io_intensive")) {
-//                    try {
-//                        Thread.sleep(sleepDurationSeconds * 1000);  // Sleep for 30 seconds
-//                    } catch (InterruptedException e) {
-//                        Thread.currentThread().interrupt();
-//                        System.out.println("Thread was interrupted, failed to complete sleep");
-//                    }
-//                }
-//                else if (Objects.equals(task.getQueryGroupId(), "non_intensive")) {
-//                    performComputeIntensiveTask();
-//                }
                 return threadPool.executorForQueryGroup(task.getQueryGroupId());
-//                return threadPool.executorForQueryGroup("non_intensive");
             }
             executorName = Names.SEARCH;
         }
