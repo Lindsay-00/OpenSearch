@@ -169,7 +169,6 @@ public class IndexStoredRulePersistenceServiceTests extends OpenSearchTestCase {
         ActionListener<CreateRuleResponse> listener = mock(ActionListener.class);
         when(mockRuleEntityParser.parse(any(String.class))).thenReturn(mockRule);
         rulePersistenceService.createRule(createRuleRequest, listener);
-
         ArgumentCaptor<Exception> failureCaptor = ArgumentCaptor.forClass(Exception.class);
         verify(listener).onFailure(failureCaptor.capture());
     }
