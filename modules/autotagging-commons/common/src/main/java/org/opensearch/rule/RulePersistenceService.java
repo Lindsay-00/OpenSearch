@@ -25,6 +25,13 @@ public interface RulePersistenceService {
     void getRule(GetRuleRequest request, ActionListener<GetRuleResponse> listener);
 
     /**
+     * Create rules based on the provided request.
+     * @param request The request containing the details for creating the rule.
+     * @param listener The listener that will handle the response or failure.
+     */
+    void createRule(CreateRuleRequest request, ActionListener<CreateRuleResponse> listener);
+
+    /**
      * Delete a rule based on the provided request.
      * @param request The request containing the ID of the rule to delete.
      * @param listener The listener that will handle the response or failure.

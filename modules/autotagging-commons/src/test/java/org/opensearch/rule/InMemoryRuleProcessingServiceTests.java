@@ -129,7 +129,7 @@ public class InMemoryRuleProcessingServiceTests extends OpenSearchTestCase {
         WLM;
 
         static {
-            WLM.registerFeatureType();
+            AutoTaggingRegistry.registerFeatureType(WLM);
         }
 
         @Override
@@ -140,11 +140,6 @@ public class InMemoryRuleProcessingServiceTests extends OpenSearchTestCase {
         @Override
         public Map<String, Attribute> getAllowedAttributesRegistry() {
             return Map.of("test_attribute", TestAttribute.TEST_ATTRIBUTE);
-        }
-
-        @Override
-        public void registerFeatureType() {
-            AutoTaggingRegistry.registerFeatureType(WLM);
         }
     }
 

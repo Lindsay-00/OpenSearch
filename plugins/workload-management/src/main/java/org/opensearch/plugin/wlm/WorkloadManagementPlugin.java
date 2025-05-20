@@ -39,6 +39,7 @@ import org.opensearch.plugin.wlm.rest.RestGetWorkloadGroupAction;
 import org.opensearch.plugin.wlm.rest.RestUpdateWorkloadGroupAction;
 import org.opensearch.plugin.wlm.rule.WorkloadGroupFeatureType;
 import org.opensearch.plugin.wlm.rule.sync.RefreshBasedSyncMechanism;
+import org.opensearch.plugin.wlm.rule.WorkloadGroupFeatureValueValidator;
 import org.opensearch.plugin.wlm.service.WorkloadGroupPersistenceService;
 import org.opensearch.plugins.ActionPlugin;
 import org.opensearch.plugins.Plugin;
@@ -69,6 +70,7 @@ import java.util.function.Supplier;
  * Plugin class for WorkloadManagement
  */
 public class WorkloadManagementPlugin extends Plugin implements ActionPlugin, SystemIndexPlugin, RuleFrameworkExtension {
+
     /**
      * The name of the index where rules are stored.
      */
@@ -101,17 +103,18 @@ public class WorkloadManagementPlugin extends Plugin implements ActionPlugin, Sy
         IndexNameExpressionResolver indexNameExpressionResolver,
         Supplier<RepositoriesService> repositoriesServiceSupplier
     ) {
-        RuleEntityParser parser = new XContentRuleParser(WorkloadGroupFeatureType.INSTANCE);
+        FeatureTypeHolder.featureType = new WorkloadGroupFeatureType(new WorkloadGroupFeatureValueValidator(clusterService));
         AttributeValueStoreFactory attributeValueStoreFactory = new AttributeValueStoreFactory(
-            WorkloadGroupFeatureType.INSTANCE,
+            FeatureTypeHolder.featureType,
             DefaultAttributeValueStore::new
         );
 
         RulePersistenceServiceHolder.rulePersistenceService = new IndexStoredRulePersistenceService(
             INDEX_NAME,
             client,
+            clusterService,
             MAX_RULES_PER_PAGE,
-            parser,
+            new XContentRuleParser(FeatureTypeHolder.featureType),
             new IndexBasedRuleQueryMapper()
         );
         InMemoryRuleProcessingService ruleProcessingService = new InMemoryRuleProcessingService(attributeValueStoreFactory);
@@ -122,9 +125,9 @@ public class WorkloadManagementPlugin extends Plugin implements ActionPlugin, Sy
             threadPool,
             clusterService.getSettings(),
             clusterService.getClusterSettings(),
-            parser,
+            new XContentRuleParser(FeatureTypeHolder.featureType),
             ruleProcessingService,
-            WorkloadGroupFeatureType.INSTANCE
+            FeatureTypeHolder.featureType
         );
 
         return List.of(refreshMechanism);
@@ -185,10 +188,14 @@ public class WorkloadManagementPlugin extends Plugin implements ActionPlugin, Sy
 
     @Override
     public FeatureType getFeatureType() {
-        return WorkloadGroupFeatureType.INSTANCE;
+        return FeatureTypeHolder.featureType;
     }
 
     static class RulePersistenceServiceHolder {
         private static RulePersistenceService rulePersistenceService;
+    }
+
+    static class FeatureTypeHolder {
+        private static FeatureType featureType;
     }
 }
